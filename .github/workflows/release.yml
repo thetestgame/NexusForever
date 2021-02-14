@@ -8,7 +8,6 @@ jobs:
   build_application:
     name: Build Application ${{ matrix.applicationName }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: tests
     strategy:
       fail-fast: false
       matrix:
