@@ -51,12 +51,23 @@ jobs:
         with:
           install: true
       - 
+        name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+      - 
         id: string
         uses: ASzc/change-string-case-action@v1
         with:
           string: ${{ matrix.serverName }}
-      -
-        name: Build/Publish
-        run: |
-          docker build . --tag nexusforever-${{ steps.string.outputs.lowercase }}:latest --build-arg ServerExecutable=${{ matrix.serverName }}Server
-          docker push nexusforever-${{ steps.string.outputs.lowercase }}:latest
+      - 
+        name: Build and push
+        uses: docker/build-push-action@v2
+        with: 
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/nexusforever-${{ steps.string.outputs.lowercase }}:${{ steps.sha_tag.outputs.tag }}
+          build-args: |
+            ServerExecutable=${{ matrix.serverName }}Server
