@@ -108,7 +108,7 @@ jobs:
   cleanup_artifacts:
     name: Cleanup build artifacts
     runs-on: ubuntu-latest
-    needs: upload-release-artifact
+    needs: upload_release_artifact
     if: github.event.ref == 'refs/heads/master'
     strategy:
       fail-fast: false
