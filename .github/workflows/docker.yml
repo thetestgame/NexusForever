@@ -58,5 +58,5 @@ jobs:
       -
         name: Build/Publish
         run: |
-          docker build . --tag ${{ secrets.DOCKERHUB_USERNAME }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest --build-arg ServerExecutable=${{ matrix.serverName }}Server
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest
+          docker build . --tag nexusforever-${{ steps.string.outputs.lowercase }}:latest --build-arg ServerExecutable=${{ matrix.serverName }}Server
+          docker push nexusforever-${{ steps.string.outputs.lowercase }}:latest
