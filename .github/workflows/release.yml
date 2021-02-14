@@ -1,0 +1,128 @@
+#
+
+name: Create Github Release
+on: [push, pull_request]
+
+jobs:
+  #
+  build_application:
+    name: Build Application ${{ matrix.applicationName }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        applicationName:
+          - ClientConnector
+          - MapGenerator
+          - AuthServer
+          - StsServer
+          - WorldServer
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      - 
+        name: Install dependencies
+        working-directory: ./Source
+        run: dotnet restore NexusForever.sln
+      - 
+        name: Build
+        working-directory: ./Source
+        run: dotnet build ./NexusForever.${{ matrix.applicationName }}
+      - 
+        name: Publish
+        working-directory: ./Source
+        run: dotnet publish -c Release -r win-x64 ./NexusForever.${{ matrix.applicationName }} --no-self-contained
+      - 
+        name: Upload Build
+        uses: actions/upload-artifact@v2
+        if: github.event.ref == 'refs/heads/master'
+        with:
+          name: Build-${{ matrix.applicationName }}-${{ matrix.os }}
+          path: ./Source/NexusForever.${{ matrix.applicationName }}/bin/Release/netcoreapp*.*/win-x64/publish/
+
+  create_release:
+    name: Create Github Release
+    runs-on: ubuntu-latest
+    needs: build_application
+    if: github.event.ref == 'refs/heads/master'
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - 
+        name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  #
+  upload_release_artifact:
+    name: Upload Github Release Artifact (Build-${{ matrix.applicationName }}-${{ matrix.os }})
+    runs-on: ubuntu-latest
+    needs: create_release
+    if: github.event.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        applicationName:
+          - ClientConnector
+          - MapGenerator
+          - AuthServer
+          - StsServer
+          - WorldServer
+    steps:
+      - 
+        name: Checkout Repository
+        uses: actions/checkout@v2
+      - 
+        name: Download Build Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-${{ matrix.applicationName }}-${{ matrix.os }}
+          path: build/${{ matrix.applicationName }}-${{ matrix.os }}
+      - 
+        name: Zip release directory
+        working-directory: ./build
+        run: zip -r ${{ matrix.applicationName }}-${{ matrix.os }}.zip build/${{ matrix.applicationName }}-${{ matrix.os }}
+      - 
+        name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./build/${{ matrix.applicationName }}-${{ matrix.os }}.zip 
+          asset_name: ${{ matrix.applicationName }}-${{ matrix.os }}.zip 
+          asset_content_type: application/zip
+
+  #
+  cleanup_artifacts:
+    name: Cleanup build artifacts
+    runs-on: ubuntu-latest
+    needs: upload-release-artifact
+    if: github.event.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        applicationName:
+          - ClientConnector
+          - MapGenerator
+          - AuthServer
+          - StsServer
+          - WorldServer
+    steps:
+      - name: Tidy up artifact to avoid storage limit
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Build-${{ matrix.applicationName }}-${{ matrix.os }}
