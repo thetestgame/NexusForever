@@ -91,7 +91,7 @@ jobs:
       - 
         name: Zip release directory
         working-directory: ./build
-        run: zip -r ${{ matrix.applicationName }}-${{ matrix.os }}.zip build/${{ matrix.applicationName }}-${{ matrix.os }}
+        run: zip -r ${{ matrix.applicationName }}-${{ matrix.os }}.zip ./${{ matrix.applicationName }}-${{ matrix.os }}/
       - 
         name: Upload Release Asset
         id: upload-release-asset 
