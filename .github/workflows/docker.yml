@@ -1,6 +1,9 @@
-name: Build Docker containers
+name: Build Docker Containers
 on:
   push:
+    branches:
+      - "master"
+      - "main"
 
 jobs:
   tests:
