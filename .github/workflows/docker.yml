@@ -1,9 +1,10 @@
+#
+
 name: Build Docker Containers
 on:
   push:
     branches:
       - "master"
-      - "main"
 
 jobs:
   tests:
@@ -97,6 +98,12 @@ jobs:
         with:
           install: true
       - 
+        name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+      - 
         id: string
         uses: ASzc/change-string-case-action@v1
         with:
@@ -112,5 +119,8 @@ jobs:
           registry: docker.pkg.github.com
           repository: thetestgame/NexusForever/nexusforever-${{ steps.string.outputs.lowercase }}
           tag_with_ref: true
+          tags: |
+            thetestgame/NexusForever/nexusforever-${{ steps.string.outputs.lowercase }}:latest
+            thetestgame/NexusForever/nexusforever-${{ steps.string.outputs.lowercase }}:${{ steps.sha_tag.outputs.tag }}
           build-args: |
             ServerExecutable=${{ matrix.serverName }}Server
