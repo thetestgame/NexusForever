@@ -1,0 +1,44 @@
+# This file is used by the automatic Labeler Github Actions workflow
+# for organizing and sorting pull requests inside the repository
+# for project management.
+
+# Add 'auth-server' label to any change within the 'NexusForever.AuthServer' folder
+auth-server:
+  - Source/NexusForever.AuthServer/*
+
+# Add 'client-connector' label to any change within the 'NexusForever.ClientConnector' folder
+client-connector:
+  - Source/NexusForever.ClientConnector/*
+
+# Add 'database' label to any change within a database project folder
+database:
+  - Source/NexusForever.Database.*/*
+
+# Add 'map-generator' label to any change within the 'NexusForever.MapGenerator' folder
+map-generator:
+  - Source/NexusForever.MapGenerator/*
+
+# Add 'shared' label to any change within the 'NexusForever.Shared' folder
+shared:
+  - Source/NexusForever.Shared/*
+
+# Add 'sts-server' label to any change within the 'NexusForever.StsServer' folder
+sts-server:
+  - Source/NexusForever.StsServer/*
+
+# Add 'world-server' label to any change within the 'NexusForever.WorldServer' folder
+world-server:
+  - Source/NexusForever.WorldServer/*
+
+# Add 'tools' label to any change within the 'Tools' folder
+tools:
+  - Tools/*
+
+# Add 'devops' label to any change within folders relating to DevOps
+devops:
+  - .github/workflows/*
+
+# Add 'docker' label to any change with the Docker related files
+docker:
+  - Dockerfile
+  - .dockerignore
