@@ -5,6 +5,7 @@ using NexusForever.Shared.Configuration;
 using NexusForever.Shared.GameTable;
 using NexusForever.Shared.GameTable.Model;
 using NexusForever.Shared.IO.Map;
+using NexusForever.Shared.Util;
 using NLog;
 
 namespace NexusForever.WorldServer.Game.Map
@@ -78,6 +79,9 @@ namespace NexusForever.WorldServer.Game.Map
             string mapPath  = ConfigurationManager<WorldServerConfiguration>.Instance.Config.Map.MapPath;
             string asset    = Path.Combine(mapPath, Path.GetFileName(assetPath));
             string filePath = Path.ChangeExtension(asset, ".nfmap");
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                filePath = filePath.Replace("Map\\", "");
 
             using (FileStream stream = File.OpenRead(filePath))
             using (BinaryReader reader = new BinaryReader(stream))
