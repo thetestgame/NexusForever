@@ -1,0 +1,61 @@
+version: "3"
+
+services:
+  auth:
+    image: thetestgame/nexusforever-auth:latest
+    networks:
+      - default
+      - nexusforever
+    ports:
+      - "23115:23115/tcp"
+    volumes:
+      - nexusforever-auth:/app
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+  
+  sts:
+    image: thetestgame/nexusforever-sts:latest
+    networks:
+      - default
+      - nexusforever
+    ports:
+      - "6600:6600/tcp"
+    volumes:
+      - nexusforever-sts:/app
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  world:
+    image: thetestgame/nexusforever-world:latest
+    networks:
+      - default
+      - nexusforever
+    ports:
+      - "24000:24000/tcp"
+    volumes:
+      - nexusforever-world:/app
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+networks:
+  default:
+    driver: overlay
+  nexusforever:
+    driver: overlay
+
+volumes:
+  nexusforever-auth:
+    driver: local
+  nexusforever-sts:
+    driver: local
+  nexusforever-world:
+    driver: local
