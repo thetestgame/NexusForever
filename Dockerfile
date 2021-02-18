@@ -23,5 +23,8 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 COPY --from=publish /app/publish/${ServerExecutable}.example.json ./${ServerExecutable}.json
 
+RUN if [ "$ServerExecutable" = "WorldServer"]; then mkdir -p ./tbl ; else echo "Ignoring tlb folder"; fi
+RUN if [ "$ServerExecutable" = "WorldServer"]; then mkdir -p ./map ; else echo "Ignoring map folder"; fi
+
 ENV ServerDLLName=$ServerExecutable
 ENTRYPOINT dotnet NexusForever.$ServerDLLName.dll

@@ -179,8 +179,10 @@ namespace NexusForever.WorldServer.Command
 
         private CommandResult HandleCommandInternal(ICommandContext context, string commandText)
         {
+            if (string.IsNullOrEmpty(commandText))
+                return CommandResult.NoCommand;
+            
             string[] parameters = commandText.Split(' ');
-
             var queue = new ParameterQueue(parameters);
             if (queue.Count == 0)
                 return CommandResult.InvalidParameters;

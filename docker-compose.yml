@@ -2,14 +2,16 @@ version: "3"
 
 services:
   auth:
-    image: thetestgame/nexusforever-auth:latest
+    image: nexusforever-auth
     networks:
       - default
       - nexusforever
     ports:
       - "23115:23115/tcp"
     volumes:
-      - nexusforever-auth:/app
+      - type: bind
+        source: ./devconfig/AuthServer.json
+        target: /app/AuthServer.json     
     restart: unless-stopped
     deploy:
       replicas: 1
@@ -17,14 +19,16 @@ services:
         condition: on-failure
   
   sts:
-    image: thetestgame/nexusforever-sts:latest
+    image: nexusforever-sts
     networks:
       - default
       - nexusforever
     ports:
       - "6600:6600/tcp"
     volumes:
-      - nexusforever-sts:/app
+      - type: bind
+        source: ./devconfig/StsServer.json
+        target: /app/StsServer.json   
     restart: unless-stopped
     deploy:
       replicas: 1
@@ -32,14 +36,18 @@ services:
         condition: on-failure
 
   world:
-    image: thetestgame/nexusforever-world:latest
+    image: nexusforever-world
     networks:
       - default
       - nexusforever
     ports:
       - "24000:24000/tcp"
     volumes:
-      - nexusforever-world:/app
+      - type: bind
+        source: ./devconfig/WorldServer.json
+        target: /app/WorldServer.json   
+      - nexusforever-tables:/app/tlb
+      - nexusforever-maps:/app/map
     restart: unless-stopped
     deploy:
       replicas: 1
@@ -51,9 +59,9 @@ networks:
   nexusforever:
 
 volumes:
-  nexusforever-auth:
+  nexusforever-config:
     driver: local
-  nexusforever-sts:
+  nexusforever-tables:
     driver: local
-  nexusforever-world:
+  nexusforever-maps:
     driver: local
