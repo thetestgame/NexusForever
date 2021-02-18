@@ -1,7 +1,17 @@
 #
 
 name: Create Github Release
-on: [push, pull_request]
+on: 
+  push:
+    branches:
+      - "master"
+    paths:
+      - Source/*
+      - .github/workflows/release.yml
+  pull_request:
+    paths:
+      - Source/*
+      - .github/workflows/release.yml
 
 jobs:
   #
