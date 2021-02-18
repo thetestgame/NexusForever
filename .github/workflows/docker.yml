@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - "master"
+    paths:
+      - Source/*
+      - .github/workflows/docker.yml
 
 jobs:
   tests:
