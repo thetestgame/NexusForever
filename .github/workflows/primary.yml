@@ -1,0 +1,229 @@
+# Primary workflow file for consuming Push and Pull Request events. This workflow will create release artifacts
+# for Windows, Linux, and MacOS along side Docker container images for each of the NexusForever servers automatically
+# on local or remote changes via Pull bot.
+
+name: CD/CI on Push and Pull Request
+on:
+  push:
+    branches:
+      - "master"
+    paths:
+      - Source/*
+      - .github/workflows/primary.yml
+  pull_request:
+    paths:
+      - Source/*
+      - .github/workflows/primary.yml
+
+jobs:
+  tests:
+    name: Perform Solution Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.101
+      - name: Install dependencies
+        working-directory: ./Source
+        run: dotnet restore NexusForever.sln
+      - name: Build
+        working-directory: ./Source
+        run: dotnet build --configuration Release --no-restore NexusForever.sln
+
+  #########################################################
+  ############ Github Automated Container Jobs ############
+  #########################################################
+
+  publish-docker:
+    name: Build/Publish ${{ matrix.serverName }} Server Container
+    runs-on: ubuntu-latest
+    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        serverName:
+          - World
+          - Sts
+          - Auth
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - uses: docker/setup-buildx-action@v1
+        id: buildx
+        with:
+          install: true
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+      - id: string
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ matrix.serverName }}
+      - name: Build and Push Image (DockerHub)
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest
+          build-args: |
+            ServerExecutable=${{ matrix.serverName }}Server
+      - name: Build Image (Github Packages)
+        run: |
+          docker pull ghcr.io/${{ github.repository }}:latest || :
+          docker build -t ghcr.io/${{ github.repository }}:latest . \
+          --cache-from ghcr.io/${{ github.repository }}:latest \
+          ServerExecutable=${{ matrix.serverName }}Server
+      - name: Push Image (GitHub Container Registry)
+        run: |
+          docker push ghcr.io/${{ github.repository }}:latest
+      - name: Login to GitHub Package Registry
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+      - name: Push Image (GitHub Package Registry)
+        run: |
+          docker tag ghcr.io/${{ github.repository }}:latest docker.pkg.github.com/${{ github.repository }}/pull:latest
+          docker push docker.pkg.github.com/${{ github.repository }}/pull:latest
+
+  build-application:
+    name: Build Application ${{ matrix.applicationName }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        applicationName:
+          - ClientConnector
+          - MapGenerator
+          - AuthServer
+          - StsServer
+          - WorldServer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        working-directory: ./Source
+        run: dotnet restore NexusForever.sln
+      - name: Build
+        working-directory: ./Source
+        run: dotnet build ./NexusForever.${{ matrix.applicationName }}
+      - name: Publish
+        working-directory: ./Source
+        run: dotnet publish -c Release -r win-x64 ./NexusForever.${{ matrix.applicationName }} --no-self-contained
+      - name: Upload Build
+        uses: actions/upload-artifact@v2
+        if: github.event.ref == 'refs/heads/master'
+        with:
+          name: Build-${{ matrix.applicationName }}-${{ matrix.os }}
+          path: ./Source/NexusForever.${{ matrix.applicationName }}/bin/Release/netcoreapp*.*/win-x64/publish/*
+
+  #########################################################
+  ############# Github Automated Release Jobs #############
+  #########################################################
+
+  create-release:
+    name: Create Github Release
+    runs-on: ubuntu-latest
+    needs: build-application
+    if: github.event.ref == 'refs/heads/master'
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release Version
+        id: release_tag
+        run: |
+          sha=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=sha::$sha"
+          echo "::set-output name=date::$(date +'%Y.%m.%d')"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.release_tag.outputs.date }}.${{ steps.release_tag.outputs.sha }}
+          release_name: Release ${{ steps.release_tag.outputs.date }}.${{ steps.release_tag.outputs.sha }}
+          draft: false
+          prerelease: false
+
+  upload-release-artifact:
+    name: Upload Github Release Artifacts (${{ matrix.os }})
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: github.event.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Download Build Artifact (ClientConnector)
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-ClientConnector-${{ matrix.os }}
+          path: build/ClientConnector-${{ matrix.os }}
+      - name: Download Build Artifact (MapGenerator)
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-MapGenerator-${{ matrix.os }}
+          path: build/MapGenerator-${{ matrix.os }}
+      - name: Download Build Artifact (AuthServer)
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-AuthServer-${{ matrix.os }}
+          path: build/AuthServer-${{ matrix.os }}
+      - name: Download Build Artifact (StsServer)
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-StsServer-${{ matrix.os }}
+          path: build/StsServer-${{ matrix.os }}
+      - name: Download Build Artifact (WorldServer)
+        uses: actions/download-artifact@v2
+        with:
+          name: Build-WorldServer-${{ matrix.os }}
+          path: build/WorldServer-${{ matrix.os }}
+      - name: Zip release directory
+        run: zip -r NexusForever-${{ matrix.os }}.zip ./build
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./NexusForever-${{ matrix.os }}.zip
+          asset_name: NexusForever-${{ matrix.os }}.zip
+          asset_content_type: application/zip
+
+  cleanup-artifacts:
+    name: Cleanup build artifacts
+    runs-on: ubuntu-latest
+    needs: upload-release-artifact
+    if: github.event.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        applicationName:
+          - ClientConnector
+          - MapGenerator
+          - AuthServer
+          - StsServer
+          - WorldServer
+    steps:
+      - name: Tidy up artifact to avoid storage limit
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: Build-${{ matrix.applicationName }}-${{ matrix.os }}

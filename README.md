@@ -1,6 +1,4 @@
 ## NexusForever
-[![Create Github Release](https://github.com/thetestgame/NexusForever/actions/workflows/release.yml/badge.svg)](https://github.com/thetestgame/NexusForever/actions/workflows/release.yml)
-![Build Docker containers](https://github.com/thetestgame/NexusForever/workflows/Build%20Docker%20containers/badge.svg)
 [![Discord](https://img.shields.io/discord/499473932131500034.svg?style=flat&logo=discord)](https://discord.gg/8wT3GEQ)
 
 ### Information
