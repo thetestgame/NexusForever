@@ -1,4 +1,5 @@
 ## NexusForever
+[![CD/CI on Push and Pull Request](https://github.com/thetestgame/NexusForever/actions/workflows/primary.yml/badge.svg)](https://github.com/thetestgame/NexusForever/actions/workflows/primary.yml)
 [![Discord](https://img.shields.io/discord/499473932131500034.svg?style=flat&logo=discord)](https://discord.gg/8wT3GEQ)
 
 ### Information
