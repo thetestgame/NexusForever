@@ -73,27 +73,10 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          platforms: linux/amd64
           tags: |
             ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest
           build-args: |
             ServerExecutable=${{ matrix.serverName }}Server
-      - name: Build Image (Github Packages)
-        run: |
-          docker pull ghcr.io/${{ github.repository }}:latest || :
-          docker build -t ghcr.io/${{ github.repository }}:latest . \
-          --cache-from ghcr.io/${{ github.repository }}:latest \
-          ServerExecutable=${{ matrix.serverName }}Server
-      - name: Push Image (GitHub Container Registry)
-        run: |
-          docker push ghcr.io/${{ github.repository }}:latest
-      - name: Login to GitHub Package Registry
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
-      - name: Push Image (GitHub Package Registry)
-        run: |
-          docker tag ghcr.io/${{ github.repository }}:latest docker.pkg.github.com/${{ github.repository }}/pull:latest
-          docker push docker.pkg.github.com/${{ github.repository }}/pull:latest
 
   build-application:
     name: Build Application ${{ matrix.applicationName }} (${{ matrix.os }})
