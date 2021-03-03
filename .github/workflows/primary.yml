@@ -5,8 +5,7 @@
 name: CD/CI on Push and Pull Request
 on:
   push:
-    branches:
-      - "master"
+    branches: [master, develop]
     paths:
       - Source/*
       - .github/workflows/primary.yml
@@ -69,12 +68,20 @@ jobs:
         uses: ASzc/change-string-case-action@v1
         with:
           string: ${{ matrix.serverName }}
+      - name: Set Docker Tag (Latest)
+        if: endsWith(github.ref, '/develop')
+        run: |
+          echo "::set-env name=DOCKER_TAG::latest"
+      - name: Set Docker Tag (Stable)
+        if: endsWith(github.ref, '/master')
+        run: |
+          echo "::set-env name=DOCKER_TAG::stable"
       - name: Build and Push Image (DockerHub)
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:latest
+            ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:${{ env.DOCKER_TAG }}
           build-args: |
             ServerExecutable=${{ matrix.serverName }}Server
 
@@ -82,6 +89,7 @@ jobs:
     name: Build Application ${{ matrix.applicationName }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: tests
+    if: github.event.ref == 'refs/heads/master'
     strategy:
       fail-fast: false
       matrix:
@@ -106,7 +114,6 @@ jobs:
         run: dotnet publish -c Release -r win-x64 ./NexusForever.${{ matrix.applicationName }} --no-self-contained
       - name: Upload Build
         uses: actions/upload-artifact@v2
-        if: github.event.ref == 'refs/heads/master'
         with:
           name: Build-${{ matrix.applicationName }}-${{ matrix.os }}
           path: ./Source/NexusForever.${{ matrix.applicationName }}/bin/Release/netcoreapp*.*/win-x64/publish/*
