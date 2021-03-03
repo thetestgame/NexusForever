@@ -5,7 +5,9 @@
 name: CD/CI on Push and Pull Request
 on:
   push:
-    branches: [master, develop]
+    branches: 
+      - "master"
+      - "develop"
     paths:
       - Source/*
       - .github/workflows/primary.yml
@@ -13,7 +15,8 @@ on:
     paths:
       - Source/*
       - .github/workflows/primary.yml
-
+  workflow_dispatch: # Allow manual triggers
+  
 jobs:
   tests:
     name: Perform Solution Tests
@@ -68,20 +71,22 @@ jobs:
         uses: ASzc/change-string-case-action@v1
         with:
           string: ${{ matrix.serverName }}
-      - name: Set Docker Tag (Latest)
-        if: endsWith(github.ref, '/develop')
+      - id: dockertag
+        name: Set Docker Tag
         run: |
-          echo "::set-env name=DOCKER_TAG::latest"
-      - name: Set Docker Tag (Stable)
-        if: endsWith(github.ref, '/master')
-        run: |
-          echo "::set-env name=DOCKER_TAG::stable"
+          if [[ "${{github.base_ref}}" == "master" || "${{github.ref}}" == "refs/heads/master" ]]; then
+            echo "::set-output name=tag::stable"
+          fi
+
+          if [[ "${{github.base_ref}}" == "develop" || "${{github.ref}}" == "refs/heads/develop" ]]; then
+            echo "::set-output name=tag::latest"
+          fi
       - name: Build and Push Image (DockerHub)
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:${{ env.DOCKER_TAG }}
+            ${{ secrets.DOCKERHUB_ORGANIZATION }}/nexusforever-${{ steps.string.outputs.lowercase }}:${{ steps.dockertag.tag }}
           build-args: |
             ServerExecutable=${{ matrix.serverName }}Server
 
