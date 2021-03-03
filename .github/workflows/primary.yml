@@ -82,7 +82,7 @@ jobs:
             ServerExecutable=${{ matrix.serverName }}Server
       - name: Build and Push Image (DockerHub) (Latest)
         uses: docker/build-push-action@v2
-        if: github.event.ref == 'refs/heads/master'
+        if: github.event.ref == 'refs/heads/develop'
         with:
           push: true
           tags: |
